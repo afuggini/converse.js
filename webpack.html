@@ -19,6 +19,9 @@
         }
     });
     converse.initialize({
+        jid: 'dirk.eichel@chat.example.org',
+        password: 'secret',
+        auto_login: true,
         show_send_button: true,
         auto_away: 300,
         auto_register_muc_nickname: true,
@@ -35,6 +38,10 @@
         // bosh_service_url: 'http://chat.example.org:5280/http-bind',
         muc_show_logs_before_join: true,
         whitelisted_plugins: ['converse-debug', 'converse-batched-probe'],
+        blacklisted_plugins: [
+            'converse-register',
+            'converse-bosh'
+        ],
     });
 </script>
 </html>

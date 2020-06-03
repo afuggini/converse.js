@@ -1129,10 +1129,17 @@ function connect (credentials) {
             _converse.api.connection.disconnect();
             return;
         }
-        if (!_converse.connection.reconnecting) {
-            _converse.connection.reset();
-        }
-        _converse.connection.connect(_converse.jid, password, _converse.onConnectStatusChanged, BOSH_WAIT);
+        // FIXME:
+        // if (!_converse.connection.reconnecting) {
+        //     _converse.connection.reset();
+        // }
+        _converse.shared_connection.postMessage([
+            'connect', {
+                'jid': _converse.jid,
+                'password': password,
+                'wait': BOSH_WAIT
+            }
+        ]);
     }
 }
 
@@ -1239,11 +1246,18 @@ _converse.initConnection = async function (domain) {
         }
     }
 
+    const worker = new SharedWorker('./src/headless/worker.js');
+    worker.onerror = (e) => log.error(`Shared Worker Error: ${e}`);
+
+    _converse.shared_connection = worker.port;
+
     if (('WebSocket' in window || 'MozWebSocket' in window) && _converse.api.settings.get("websocket_url")) {
-        _converse.connection = new Strophe.Connection(
+        _converse.shared_connection.start();
+        _converse.shared_connection.postMessage([
+            'initConnection',
             _converse.api.settings.get("websocket_url"),
-            Object.assign(_converse.default_connection_options, _converse.api.settings.get("connection_options"))
-        );
+             Object.assign(_converse.default_connection_options, _converse.api.settings.get("connection_options"))
+        ]);
     } else if (_converse.api.settings.get('bosh_service_url')) {
         _converse.connection = new Strophe.Connection(
             _converse.api.settings.get('bosh_service_url'),
@@ -1257,14 +1271,13 @@ _converse.initConnection = async function (domain) {
         throw new Error("initConnection: this browser does not support "+
                         "websockets and bosh_service_url wasn't specified.");
     }
-    setUpXMLLogging();
     /**
      * Triggered once the `Strophe.Connection` constructor has been initialized, which
      * will be responsible for managing the connection to the XMPP server.
      *
      * @event _converse#connectionInitialized
      */
-    _converse.api.trigger('connectionInitialized');
+    // _converse.api.trigger('connectionInitialized');
 }
 
 
@@ -1312,7 +1325,7 @@ function saveJIDtoSession (jid) {
     });
     // Set JID on the connection object so that when we call `connection.bind`
     // the new resource is found by Strophe.js and sent to the XMPP server.
-    _converse.connection.jid = jid;
+    // FIXME _converse.connection.jid = jid;
 }
 
 
@@ -1343,21 +1356,6 @@ _converse.setUserJID = async function (jid) {
     return jid;
 }
 
-
-function setUpXMLLogging () {
-    const lmap = {}
-    lmap[Strophe.LogLevel.DEBUG] = 'debug';
-    lmap[Strophe.LogLevel.INFO] = 'info';
-    lmap[Strophe.LogLevel.WARN] = 'warn';
-    lmap[Strophe.LogLevel.ERROR] = 'error';
-    lmap[Strophe.LogLevel.FATAL] = 'fatal';
-
-    Strophe.log = (level, msg) => log.log(msg, lmap[level]);
-    Strophe.error = (msg) => log.error(msg);
-
-    _converse.connection.xmlInput = body => log.debug(body.outerHTML, 'color: darkgoldenrod');
-    _converse.connection.xmlOutput = body => log.debug(body.outerHTML, 'color: darkcyan');
-}
 
 async function getLoginCredentials () {
     let credentials;
