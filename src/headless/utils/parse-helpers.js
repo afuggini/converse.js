@@ -20,7 +20,7 @@ helpers.mapAddCoordsToReferences = (indexes) => (reference, index) => {
     return {
         ...reference,
         begin,
-        end: begin + reference.value.length // add one for the @
+        end: begin + reference.value.length
     }
 };
 
@@ -40,13 +40,8 @@ helpers.mapMentionsToTempReferences = (mention) => ({
     type: 'mention'
 });
 
-helpers.mapMatchesToBeginIndexes = (match) => {
-    const whitespace_regex = /[\s]+/g;
-    const match_is_preceded_by_white_space = whitespace_regex.test(match[0][0]);
-    return match_is_preceded_by_white_space
-        ? match.index + 1
-        : match.index;
-};
+helpers.mapMatchesToBeginIndexes = (regex) => (match) =>
+    regex.test(match[0][0]) ? match.index + 1 : match.index;
 
 helpers.reduceTextFromReferences = (updated_text, reference) => {
     const { begin, end, value } = reference;
